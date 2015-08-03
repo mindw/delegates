@@ -1,14 +1,12 @@
-cmake_minimum_required(VERSION 2.8)
 
-# set source/lib variables
-set(delegates_sources DelegateTests.cpp)
-set(closure_sources ClosureTests.cpp)
-set(sample01_sources sample01.cpp)
-
-include_directories( ../include)
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # make project/target
-project(delegates-tests CXX)
-add_executable(DelegateTest ${delegates_sources})
-add_executable(ClosureTest ${closure_sources})
-add_executable(sample01 ${sample01_sources})
+add_executable(DelegateTest DelegateTests.cpp)
+add_test(NAME DelegateTest COMMAND $<TARGET_FILE:DelegateTest>)
+
+add_executable(ClosureTest ClosureTests.cpp)
+add_test(NAME ClosureTest COMMAND $<TARGET_FILE:ClosureTest>)
+
+add_executable(sample01 sample01.cpp)
+add_test(NAME sample01 COMMAND $<TARGET_FILE:sample01>)
