@@ -1,5 +1,8 @@
+#if !defined(__DELEGATE_H__)
+#define __DELEGATE_H__
+
 /**
- * Main template for delgates
+ * Main template for delegates
  *
  * \tparam return_type  return type of the function that gets captured
  * \tparam params       variadic template list for possible arguments
@@ -9,12 +12,12 @@ template<typename return_type, typename... params>
 class Delegate; //forward declaration..
 
 template<typename return_type, typename... params>
-class BaseDelegate
+class Delegate<return_type(params...)>
 {
 protected:
     typedef return_type (*Pointer2Function)(void* callee, params...);
 public:
-    BaseDelegate(void* callee, Pointer2Function function)
+    Delegate(void* callee, Pointer2Function function)
         : fpCallee(callee)
         , fpCallbackFunction(function)
     {}
@@ -24,7 +27,7 @@ public:
         return (*fpCallbackFunction)(fpCallee, xs...);
     }
 
-    bool operator==(const BaseDelegate& other) const
+    bool operator==(const Delegate& other) const
     {
         return (fpCallee == other.fpCallee)
                && (fpCallbackFunction == other.fpCallbackFunction);
@@ -33,27 +36,6 @@ public:
 private:
     void* fpCallee;
     Pointer2Function fpCallbackFunction;
-};
-template<typename return_type, typename... params>
-class Delegate<return_type(params...)>
-    : public BaseDelegate<return_type, params...>
-{
-    typedef BaseDelegate<return_type, params...> Base;
-public:
-    Delegate(void* callee, typename Base::Pointer2Function function)
-        : Base(callee, function)
-    {}
-};
-
-template<typename return_type, typename... params>
-class Delegate<return_type(params...) const>
-    : public BaseDelegate<return_type, params...>
-{
-    typedef BaseDelegate<return_type, params...> Base;
-public:
-    Delegate(void* callee, typename Base::Pointer2Function function)
-        : Base(callee, function)
-    {}
 };
 
 /**
@@ -69,17 +51,18 @@ struct DelegateFactory
     {
         return (static_cast<T*>(o)->*Func)(xs...);
     }
+
     template<return_type (T::*Func)(params...) const>
     static return_type MethodCallerC(void* o, params... xs)
     {
-        return (static_cast<T*>(o)->*Func)(xs...);
+        return (static_cast<const T*>(o)->*Func)(xs...);
     }
 
     template <return_type (*TFnctPtr)(params...)>
-	static return_type FunctionCaller(void*, params... xs)
-	{
-		return (TFnctPtr)(xs...);
-	}
+    static return_type FunctionCaller(void*, params... xs)
+    {
+        return (TFnctPtr)(xs...);
+    }
 
     template<return_type (T::*Func)(params...)>
     inline static Delegate<return_type(params...)> Create(T* o)
@@ -88,9 +71,9 @@ struct DelegateFactory
     }
 
     template<return_type (T::*Func)(params...) const>
-    inline static Delegate<return_type(params...) const> CreateC(T* o)
+    inline static Delegate<return_type(params...)> CreateC(const T* o)
     {
-        return Delegate<return_type(params...) const>(o, &DelegateFactory::MethodCallerC<Func>);
+        return Delegate<return_type(params...)>(const_cast<T *>(o), &DelegateFactory::MethodCallerC<Func>);
     }
 
     template<return_type (*TFnctPtr)(params...)>
@@ -108,12 +91,15 @@ DelegateFactory<T, return_type, params... > MakeDelegate(return_type (T::*)(para
 {
     return DelegateFactory<T, return_type, params...>();
 }
+
 template<typename T, typename return_type, typename... params>
 DelegateFactory<T, return_type, params... > MakeDelegateC(return_type (T::*)(params...) const)
 {
     return DelegateFactory<T, return_type, params...>();
 }
+
 class no_type{};
+
 template<typename return_type, typename... params>
 DelegateFactory<no_type, return_type, params... > MakeDelegateFree(return_type (*TFnctPtr)(params...))
 {
@@ -125,3 +111,4 @@ DelegateFactory<no_type, return_type, params... > MakeDelegateFree(return_type (
 #define DELEGATE_FREE(func) (MakeDelegateFree(func).CreateForFunction<func>())
 
 
+#endif // !__DELEGATE_H__
